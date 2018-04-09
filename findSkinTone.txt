@@ -1,0 +1,97 @@
+package opencv2;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+
+public class findSkinTone 
+{
+	public void detect()
+	{
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		System.out.println("\nRunning FaceDetector");
+		
+		CascadeClassifier eyeDetector = new CascadeClassifier(getClass().getResource("haarcascade_eye_tree_eyeglasses.xml").getPath().substring(1));
+		Mat image = Highgui.imread(getClass().getResource("face15.jpg").getPath().substring(1));
+		
+		Mat gray = new Mat();
+		Imgproc.cvtColor(image, gray, Imgproc.COLOR_RGB2GRAY);
+		
+		MatOfRect eyeDetections = new MatOfRect();
+		eyeDetector.detectMultiScale(gray, eyeDetections);
+		
+		System.out.println(String.format("Detected %s objs", eyeDetections.toArray().length));
+		
+		double[] avr = new double[]{0.0, 0.0, 0.0};
+		int n = 0;
+		for(Rect rect : eyeDetections.toArray())
+		{		
+			if(++n > 2) break;
+			double[] sum = new double[]{0.0, 0.0, 0.0};
+			
+			for(int i = (int) (rect.y + rect.height * 1.25); i <= rect.y + rect.height * 1.75; i++)
+				for(int j = (int) (rect.x + rect.width * 0.25); j <= rect.x + rect.width * 0.75; j++)
+				{
+					double data[] = image.get(i, j);
+					sum[0] += data[0];
+					sum[1] += data[1];
+					sum[2] += data[2];
+				}	
+			avr[0] += sum[0] / (rect.height / 2 * rect.width / 2);
+			avr[1] += sum[1] / (rect.height / 2 * rect.width / 2);
+			avr[2] += sum[2] / (rect.height / 2 * rect.width / 2);
+			
+			Core.rectangle(image, new Point(rect.x, rect.y),
+					new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 0, 255));
+			
+			Core.rectangle(image, new Point(rect.x + rect.width * 0.25, rect.y + rect.height * 1.25),
+					new Point(rect.x + rect.width * 0.75, rect.y + rect.height * 1.75), new Scalar(0, 255, 0));
+		}	
+		avr[0] /= eyeDetections.toArray().length;
+		avr[1] /= eyeDetections.toArray().length;
+		avr[2] /= eyeDetections.toArray().length;
+		Mat skin = new Mat(image.size(), 16, new Scalar(avr[0], avr[1], avr[2]));
+		
+		System.out.println(avr[0] + " " + avr[1] + " " + avr[2]);
+		showResult(skin);
+		showResult(image);
+	}
+	
+	public static void showResult(Mat img) 
+	{
+	    Imgproc.resize(img, img, new Size(640, 480));
+	    MatOfByte matOfByte = new MatOfByte();
+	    Highgui.imencode(".jpg", img, matOfByte);
+	    byte[] byteArray = matOfByte.toArray();
+	    BufferedImage bufImage = null;
+	    try 
+	    {
+	        InputStream in = new ByteArrayInputStream(byteArray);
+	        bufImage = ImageIO.read(in);
+	        JFrame frame = new JFrame();
+	        frame.getContentPane().add(new JLabel(new ImageIcon(bufImage)));
+	        frame.pack();
+	        frame.setVisible(true);
+	    } catch (Exception e) 
+	    {
+	        e.printStackTrace();
+	    }
+	}
+}

@@ -1,0 +1,130 @@
+package opencv2;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+
+public class findEye 
+{
+	public void detect()
+	{
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		System.out.println("\nRunning FaceDetector");
+		
+		CascadeClassifier eyeDetector = new CascadeClassifier(getClass().getResource("haarcascade_eye_tree_eyeglasses.xml").getPath().substring(1));
+		CascadeClassifier faceDetector = new CascadeClassifier(getClass().getResource("haarcascade_frontalface_alt2.xml").getPath().substring(1));
+		Mat image = Highgui.imread(getClass().getResource("face10.jpg").getPath().substring(1));
+		Mat gray = new Mat();
+		Imgproc.cvtColor(image, gray, Imgproc.COLOR_RGB2GRAY);
+		
+		
+		
+		MatOfRect eyeDetections = new MatOfRect();
+		eyeDetector.detectMultiScale(gray, eyeDetections);
+		
+		MatOfRect faceDetections = new MatOfRect();
+		faceDetector.detectMultiScale(gray, faceDetections);
+		
+		System.out.println(String.format("Detected %s objs", eyeDetections.toArray().length));
+		System.out.println(String.format("Detected %s objs", faceDetections.toArray().length));
+		
+		ArrayList<Point> check = new ArrayList<Point>();
+		double face = 0;
+		for(Rect rect : faceDetections.toArray())
+		{
+			Core.rectangle(image, new Point(rect.x, rect.y),  new Point(rect.x + rect.width, rect.y + rect.height),
+					new Scalar(255, 0, 0));
+			face = rect.width * rect.height;
+		}
+		double eye = 0;
+		for(Rect rect : eyeDetections.toArray())
+		{
+			eye = Math.PI * rect.width + rect.height * rect.width + rect.height * 0.06;
+			
+			for(int i=(int) (rect.y + rect.height * 0.2); i<=rect.y + rect.height; i++)
+				for(int j=rect.x; j<=rect.x + rect.width; j++)
+				{
+					double data[] = gray.get(i, j);
+					double sum = 0;
+					for(int k=-5; k<=5; k++)
+					{
+						if(k==0) continue;
+						for(int l=-5; l<=5; l++)
+						{
+							if(l==0) continue;
+							double data2[] = gray.get(i + k, j + l);
+							for(int m=0; m<1; m++)
+								sum += Math.abs(data2[m] - data[m]);
+						}
+					}
+					if(sum/120 >= 30)
+						check.add(new Point(i, j));					
+				}
+			
+			Core.rectangle(image, new Point(rect.x, rect.y),  new Point(rect.x + rect.width, rect.y + rect.height),
+					new Scalar(0, 255, 255));
+//			Core.circle(image, new Point(rect.x + rect.width / 2,rect.y + rect.height / 2),
+//					(int) ((rect.width + rect.height) * 0.2), new Scalar(0, 255, 0));
+			Core.ellipse(image,new Point(rect.x + rect.width / 2,rect.y + rect.height / 2),
+					new Size((rect.width + rect.height) * 0.2, (rect.width + rect.height) * 0.1),
+					0, 0, 360, new Scalar(0, 0, 255));
+		}
+		
+		
+		
+		for(Point i : check)
+		{
+			byte[] data = {(byte) 255, (byte) 255,(byte) 0};
+			image.put( (int)i.x, (int)i.y, data);
+		}
+		Imgproc.Canny(image, image, 100, 200);
+		System.out.println("eye vs face : " + face / eye);
+		showResult(image);
+		
+		String filename = "output_0.png";
+		System.out.println(String.format("Writing %s", filename));
+		Highgui.imwrite(filename, image);
+		
+		image.release();
+		gray.release();
+	}
+	
+	public static void showResult(Mat img) 
+	{
+	    Imgproc.resize(img, img, new Size(640, 480));
+	    MatOfByte matOfByte = new MatOfByte();
+	    Highgui.imencode(".jpg", img, matOfByte);
+	    byte[] byteArray = matOfByte.toArray();
+	    BufferedImage bufImage = null;
+	    try 
+	    {
+	        InputStream in = new ByteArrayInputStream(byteArray);
+	        bufImage = ImageIO.read(in);
+	        JFrame frame = new JFrame();
+	        frame.getContentPane().add(new JLabel(new ImageIcon(bufImage)));
+	        frame.pack();
+	        frame.setVisible(true);
+	    } catch (Exception e) 
+	    {
+	        e.printStackTrace();
+	    }
+	}
+}

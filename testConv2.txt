@@ -1,0 +1,88 @@
+package opencv2;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Rect;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+
+public class testConv2
+{
+	public void detect()
+	{		
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		System.out.println("\nRunning FaceDetector");
+			
+		CascadeClassifier eyeDetector = new CascadeClassifier(getClass().getResource("haarcascade_eye_tree_eyeglasses.xml").getPath().substring(1));
+		ArrayList<Mat> process = new ArrayList<Mat>();		
+		
+		for(int i = 0; i <= 10; i++)
+		{
+			if(i == 2 || i == 3 || i == 4 || i == 6 || i == 8) continue;			
+			
+			Mat input = Highgui.imread(getClass().getResource("face" + i + ".jpg").getPath().substring(1));
+			Mat dummy = new Mat();
+			
+			// showResult(input);
+			
+			Imgproc.cvtColor(input, dummy, Imgproc.COLOR_RGB2GRAY);
+						
+			MatOfRect eyeDetections = new MatOfRect();
+			eyeDetector.detectMultiScale(dummy, eyeDetections);
+			
+			System.out.println(String.format("Detected %s objs", eyeDetections.toArray().length));
+			
+			int n = 0;
+			for(Rect rect : eyeDetections.toArray())
+			{
+				if(++n > 2) break;
+				Rect rect2 = new Rect(rect.x, rect.y + (int) (rect.height * 0.2), rect.width, (int) (rect.height * 0.8));
+				Mat cannymat = new Mat(input, rect2);
+				Imgproc.Canny(cannymat, cannymat, 200, 200);
+				
+				Imgproc.resize(cannymat, cannymat, new Size(400, 400));				
+				process.add(cannymat);
+				// showResult(cannymat);
+			}		
+		}
+		
+		int[] index = new int[] {0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0};		
+		
+		convolution conv = new convolution();
+		conv.test(process, index);
+	}
+	
+	public static void showResult(Mat img) 
+	{
+	    MatOfByte matOfByte = new MatOfByte();
+	    Highgui.imencode(".jpg", img, matOfByte);
+	    byte[] byteArray = matOfByte.toArray();
+	    BufferedImage bufImage = null;
+	    try 
+	    {
+	        InputStream in = new ByteArrayInputStream(byteArray);
+	        bufImage = ImageIO.read(in);
+	        JFrame frame = new JFrame();
+	        frame.getContentPane().add(new JLabel(new ImageIcon(bufImage)));
+	        frame.pack();
+	        frame.setVisible(true);
+	    } catch (Exception e) 
+	    {
+	        e.printStackTrace();
+	    }
+	}
+}

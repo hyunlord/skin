@@ -1,0 +1,67 @@
+package opencv2;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+
+public class findSkinTone2 
+{
+	public void detect()
+	{
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		System.out.println("\nRunning FaceDetector");
+		
+		Mat image = Highgui.imread(getClass().getResource("face12.jpg").getPath().substring(1));
+		Mat ycbcr = new Mat();
+		Imgproc.cvtColor(image, ycbcr, Imgproc.COLOR_BGR2HLS);
+		// Imgproc.cvtColor(image, ycbcr, Imgproc.color);
+		// Core.inRange(ycbcr, new Scalar(0, 133, 77), new Scalar(255, 173, 127), ycbcr);
+		
+		for(int i=0; i<ycbcr.height(); i++)
+		{
+			for(int j=0; j<ycbcr.width(); j++)
+			{
+				double[] input = ycbcr.get(i, j);
+				double LsRatio = input[1] / input[2];
+				boolean skinPixel = (input[2] > 50) && (LsRatio > 0.5) && (LsRatio < 3.0) && ((input[0] <= 14) || (input[0] >= 165));
+				
+				if(!skinPixel) image.put(i, j, new double[] {0, 0, 0});
+			}
+		}
+		
+		showResult(image);
+	}
+	
+	public static void showResult(Mat img) 
+	{
+	    Imgproc.resize(img, img, new Size(640, 480));
+	    MatOfByte matOfByte = new MatOfByte();
+	    Highgui.imencode(".jpg", img, matOfByte);
+	    byte[] byteArray = matOfByte.toArray();
+	    BufferedImage bufImage = null;
+	    try 
+	    {
+	        InputStream in = new ByteArrayInputStream(byteArray);
+	        bufImage = ImageIO.read(in);
+	        JFrame frame = new JFrame();
+	        frame.getContentPane().add(new JLabel(new ImageIcon(bufImage)));
+	        frame.pack();
+	        frame.setVisible(true);
+	    } catch (Exception e) 
+	    {
+	        e.printStackTrace();
+	    }
+	}
+}

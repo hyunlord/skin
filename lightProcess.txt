@@ -1,0 +1,82 @@
+package opencv2;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+
+public class lightProcess 
+{
+	public void detect()
+	{
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		System.out.println("\nRunning FaceDetector");
+		
+		Mat image = Highgui.imread(getClass().getResource("face10.jpg").getPath().substring(1));
+		Mat light = new Mat();
+		Imgproc.cvtColor(image, light, Imgproc.COLOR_BGR2Lab);
+		Imgproc.medianBlur(light, light, 49);
+		
+		for(int i=0; i<light.height(); i++)
+		{
+			for(int j=0; j<light.width(); j++)
+			{				
+				double[] data = light.get(i, j);
+				data[0] = 255 - data[0];
+				data[1] = 255 - data[1];
+				data[2] = 255 - data[2];
+				light.put(i, j, data);
+			}
+		}
+		
+		Imgproc.cvtColor(light, light, Imgproc.COLOR_Lab2BGR);
+		
+		for(int i=0; i<image.height(); i++)
+		{
+			for(int j=0; j<image.width(); j++)
+			{	
+				double[] data = image.get(i, j);
+				double[] data2 = light.get(i, j);
+				data[0] = (data[0] + data2[0]) / 2;
+				data[1] = (data[1] + data2[1]) / 2;
+				data[2] = (data[2] + data2[2]) / 2;
+				image.put(i, j, data);
+			}
+		}
+		
+		showResult(image);
+		showResult(light);
+	}
+	
+	public static void showResult(Mat img) 
+	{
+	    Imgproc.resize(img, img, new Size(640, 480));
+	    MatOfByte matOfByte = new MatOfByte();
+	    Highgui.imencode(".jpg", img, matOfByte);
+	    byte[] byteArray = matOfByte.toArray();
+	    BufferedImage bufImage = null;
+	    try 
+	    {
+	        InputStream in = new ByteArrayInputStream(byteArray);
+	        bufImage = ImageIO.read(in);
+	        JFrame frame = new JFrame();
+	        frame.getContentPane().add(new JLabel(new ImageIcon(bufImage)));
+	        frame.pack();
+	        frame.setVisible(true);
+	    } catch (Exception e) 
+	    {
+	        e.printStackTrace();
+	    }
+	}
+}

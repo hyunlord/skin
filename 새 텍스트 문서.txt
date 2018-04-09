@@ -1,0 +1,88 @@
+package opencv2;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Rect;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+
+public class testConv
+{
+	public void test()
+	{		
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		System.out.println("\nRunning FaceDetector");
+		
+		CascadeClassifier faceDetector = new CascadeClassifier(getClass().getResource("haarcascade_frontalface_alt2.xml").getPath().substring(1));
+		
+		ArrayList<Mat> image = new ArrayList<Mat>();
+		ArrayList<Mat> gray = new ArrayList<Mat>();		
+		
+		int j = 0;
+		for(int i = 0; i <= 10; i++)
+		{
+			if(i == 2 || i == 3 || i == 4 || i == 6 || i == 8) continue;
+			Mat input = Highgui.imread(getClass().getResource("face" + i + ".jpg").getPath().substring(1));
+			Imgproc.resize(input, dummy, new Size(100, 100));
+			image.add(Highgui.imread(getClass().getResource("face" + i + ".jpg").getPath().substring(1)));
+			
+			Mat dummy = new Mat(image.get(j).size(), 16);
+			Mat dummy2 = new Mat(new Size(100, 100), 16);
+			Imgproc.cvtColor(image.get(j), dummy, Imgproc.COLOR_RGB2GRAY);
+			
+			MatOfRect faceDetections = new MatOfRect();
+			faceDetector.detectMultiScale(dummy, faceDetections);
+			System.out.println(image.get(j).width() + " " + image.get(j).height());
+			for(Rect rect : faceDetections.toArray())
+			{	
+				if(faceDetections.toArray().length > 1) break;
+				for(int ry = (2 * rect.y + rect.height) / 2 - 50; ry <= (2 * rect.y + rect.height) / 2 + 50; ry++)
+					for(int rx = (2 * rect.x + rect.width) / 2 - 50; rx <= (2 * rect.x + rect.width) / 2 + 50; rx++)
+						dummy2.put(ry, rx, image.get(j).get(ry, rx));			
+			}
+			// showResult(image.get(j));	
+			gray.add(dummy2);
+			j++;
+		}
+		
+		int[] index = new int[] {0, 1, 0, 0, 0, 1};		
+		
+		convolution conv = new convolution();
+		// conv.test(gray, index);
+	}
+	
+	public static void showResult(Mat img) 
+	{
+	    Imgproc.resize(img, img, new Size(640, 480));
+	    MatOfByte matOfByte = new MatOfByte();
+	    Highgui.imencode(".jpg", img, matOfByte);
+	    byte[] byteArray = matOfByte.toArray();
+	    BufferedImage bufImage = null;
+	    try 
+	    {
+	        InputStream in = new ByteArrayInputStream(byteArray);
+	        bufImage = ImageIO.read(in);
+	        JFrame frame = new JFrame();
+	        frame.getContentPane().add(new JLabel(new ImageIcon(bufImage)));
+	        frame.pack();
+	        frame.setVisible(true);
+	    } catch (Exception e) 
+	    {
+	        e.printStackTrace();
+	    }
+	}
+}

@@ -1,0 +1,10 @@
+package opencv2;
+
+public class mainClass 
+{
+	public static void main(String[] args)
+	{
+		testConv2 fe = new testConv2();
+		fe.detect();
+	}
+}

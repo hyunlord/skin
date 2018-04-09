@@ -1,0 +1,68 @@
+package opencv2;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+
+public class testConv
+{
+	public void detect()
+	{		
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		System.out.println("\nRunning FaceDetector");
+			
+		ArrayList<Mat> gray = new ArrayList<Mat>();		
+		
+		for(int i = 0; i <= 10; i++)
+		{
+			if(i == 2 || i == 3 || i == 4 || i == 6 || i == 8) continue;
+			Mat input = Highgui.imread(getClass().getResource("face" + i + ".jpg").getPath().substring(1));
+			Mat dummy = new Mat();
+			Mat dummy2 = new Mat();
+			Imgproc.cvtColor(input, dummy, Imgproc.COLOR_RGB2GRAY);
+			Imgproc.resize(dummy, dummy2, new Size(400, 400));
+			
+			gray.add(dummy2);
+			// showResult(dummy2);
+		}
+		
+		int[] index = new int[] {0, 0, 0, 0, 0, 0};		
+		
+		convolution conv = new convolution();
+		conv.test(gray, index);
+	}
+	
+	public static void showResult(Mat img) 
+	{
+	    Imgproc.resize(img, img, new Size(640, 480));
+	    MatOfByte matOfByte = new MatOfByte();
+	    Highgui.imencode(".jpg", img, matOfByte);
+	    byte[] byteArray = matOfByte.toArray();
+	    BufferedImage bufImage = null;
+	    try 
+	    {
+	        InputStream in = new ByteArrayInputStream(byteArray);
+	        bufImage = ImageIO.read(in);
+	        JFrame frame = new JFrame();
+	        frame.getContentPane().add(new JLabel(new ImageIcon(bufImage)));
+	        frame.pack();
+	        frame.setVisible(true);
+	    } catch (Exception e) 
+	    {
+	        e.printStackTrace();
+	    }
+	}
+}
